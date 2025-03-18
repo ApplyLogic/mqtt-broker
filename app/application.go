@@ -21,7 +21,7 @@ func (a *App) Initialize(cfg *config.Config) {
 	a.Config = cfg
 	a.Logger = &middleware.Logger{}
 	a.Logger.Initialize(cfg)
-	a.Broker = mqtt.NewBroker(a.Config)
+	a.Broker = mqtt.New(a.Config)
 }
 
 func (a *App) Start() {

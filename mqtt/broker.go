@@ -16,7 +16,7 @@ type Broker struct {
 	Server *mqttServer.Server
 }
 
-func NewBroker(cfg *config.Config) *Broker {
+func New(cfg *config.Config) *Broker {
 
 	// Load tls cert from your cert file
 	cert, err := tls.LoadX509KeyPair(fmt.Sprintf("%s/test_cert.pem", cfg.TLS.CertPath), fmt.Sprintf("%s/test_cert.key", cfg.TLS.CertPath))
