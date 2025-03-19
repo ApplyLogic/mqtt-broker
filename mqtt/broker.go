@@ -17,64 +17,53 @@ type Broker struct {
 }
 
 func New(cfg *config.Config) *Broker {
-
-	// Load tls cert from your cert file
-	cert, err := tls.LoadX509KeyPair(fmt.Sprintf("%s/test_cert.pem", cfg.TLS.CertPath), fmt.Sprintf("%s/test_cert.key", cfg.TLS.CertPath))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Basic TLS Config
-	tlsConfig := &tls.Config{
-		Certificates: []tls.Certificate{cert},
-	}
-
-	// Optionally, if you want clients to authenticate only with certs issued by your CA,
-	// you might want to use something like this:
-	if cfg.TLS.CACertFile != "" {
-		pemCACert, err := os.ReadFile(cfg.TLS.CACertFile)
-		if err != nil {
-			log.Fatal(err)
-		}
-		certPool := x509.NewCertPool()
-		ok := certPool.AppendCertsFromPEM(pemCACert)
-		if ok {
-			tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
-			tlsConfig.ClientCAs = certPool
-		}
-	}
-
+	// Create MQTT server.
+	log.Println("Create MQTT broker")
 	server := mqttServer.New(nil)
-	_ = server.AddHook(new(auth.AllowHook), nil)
 
-	tcp := listeners.NewTCP(listeners.Config{
+	//tlsConfig, err := configureTLS()
+	//if err != nil {
+	//	log.Fatalf("Error configuring TLS: %v", err)
+	//}
+
+	// Create TCP listener with TLS.
+	tcpListener := listeners.NewTCP(listeners.Config{
+		Type:    "",
 		ID:      cfg.MQTT.TCP.Id,
 		Address: fmt.Sprintf(":%s", cfg.MQTT.TCP.Address),
 		//TLSConfig: tlsConfig,
 	})
-	err = server.AddListener(tcp)
+	err := server.AddListener(tcpListener)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Error adding listener: %v", err)
 	}
 
-	ws := listeners.NewWebsocket(listeners.Config{
+	// Add an authentication hook (example: allow all).  For production, replace with proper authentication.
+	err = server.AddHook(new(auth.AllowHook), nil)
+	if err != nil {
+		log.Fatalf("Error adding authentication hook: %v", err)
+	}
+
+	// Create Websocket listener with TLS.
+	wsListener := listeners.NewTCP(listeners.Config{
+		Type:    "",
 		ID:      cfg.MQTT.WebSocket.Id,
 		Address: fmt.Sprintf(":%s", cfg.MQTT.WebSocket.Address),
 		//TLSConfig: tlsConfig,
 	})
-	err = server.AddListener(ws)
+	err = server.AddListener(wsListener)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	stats := listeners.NewHTTPStats(
-		listeners.Config{
-			ID:      cfg.MQTT.HTTPStats.Id,
-			Address: fmt.Sprintf(":%s", cfg.MQTT.HTTPStats.Address),
-			//TLSConfig: tlsConfig,
-		}, server.Info,
-	)
-	err = server.AddListener(stats)
+	// Create HTTP Stats listener with TLS.
+	statsListener := listeners.NewTCP(listeners.Config{
+		Type:    "",
+		ID:      cfg.MQTT.HTTPStats.Id,
+		Address: fmt.Sprintf(":%s", cfg.MQTT.HTTPStats.Address),
+		//TLSConfig: tlsConfig,
+	})
+	err = server.AddListener(statsListener)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -82,4 +71,23 @@ func New(cfg *config.Config) *Broker {
 	return &Broker{
 		Server: server,
 	}
+}
+
+func configureTLS() (*tls.Config, error) {
+	caCert, err := os.ReadFile("/Users/golanshay/Workspace/tls-certs/ca-cert.pem")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCert)
+	cert, err := tls.LoadX509KeyPair("/Users/golanshay/Workspace/tls-certs/server-cert.pem", "/Users/golanshay/Workspace/tls-certs/server-key.pem")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return &tls.Config{
+		RootCAs:      caCertPool,
+		Certificates: []tls.Certificate{cert},
+	}, nil
 }

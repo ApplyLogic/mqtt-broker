@@ -31,8 +31,9 @@ type HTTPStats struct {
 }
 
 type TLS struct {
-	CertPath   string
-	CACertFile string
+	CACertFile     string
+	ServerCertFile string
+	ServerKeyFile  string
 }
 
 func LoanConfig() (*Config, error) {
@@ -58,7 +59,8 @@ func LoanConfig() (*Config, error) {
 			},
 		},
 		TLS: &TLS{
-			CertPath: viper.GetString("TLS_CERT_PATH"),
+			ServerCertFile: viper.GetString("TLS_SERVER_CERT_FILE"),
+			ServerKeyFile:  viper.GetString("TLS_SERVER_KEY_FILE"),
 			//if you want clients to authenticate only with certs issued by your CA
 			CACertFile: viper.GetString("TLS_CA_CERT_FILE"),
 		},
