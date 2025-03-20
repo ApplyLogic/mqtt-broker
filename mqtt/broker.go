@@ -19,12 +19,19 @@ type Broker struct {
 func New(cfg *config.Config) *Broker {
 	// Create MQTT server.
 	log.Println("Create MQTT broker")
-	server := mqttServer.New(nil)
+	opts := &mqttServer.Options{}
+	server := mqttServer.New(opts)
 
 	//tlsConfig, err := configureTLS()
 	//if err != nil {
 	//	log.Fatalf("Error configuring TLS: %v", err)
 	//}
+
+	// Add an authentication hook (example: allow all).  For production, replace with proper authentication.
+	err := server.AddHook(new(auth.AllowHook), nil)
+	if err != nil {
+		log.Fatalf("Error adding authentication hook: %v", err)
+	}
 
 	// Create TCP listener with TLS.
 	tcpListener := listeners.NewTCP(listeners.Config{
@@ -33,19 +40,13 @@ func New(cfg *config.Config) *Broker {
 		Address: fmt.Sprintf(":%s", cfg.MQTT.TCP.Address),
 		//TLSConfig: tlsConfig,
 	})
-	err := server.AddListener(tcpListener)
+	err = server.AddListener(tcpListener)
 	if err != nil {
 		log.Fatalf("Error adding listener: %v", err)
 	}
 
-	// Add an authentication hook (example: allow all).  For production, replace with proper authentication.
-	err = server.AddHook(new(auth.AllowHook), nil)
-	if err != nil {
-		log.Fatalf("Error adding authentication hook: %v", err)
-	}
-
 	// Create Websocket listener with TLS.
-	wsListener := listeners.NewTCP(listeners.Config{
+	wsListener := listeners.NewWebsocket(listeners.Config{
 		Type:    "",
 		ID:      cfg.MQTT.WebSocket.Id,
 		Address: fmt.Sprintf(":%s", cfg.MQTT.WebSocket.Address),
