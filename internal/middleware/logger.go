@@ -34,6 +34,7 @@ func (l *Logger) LoggingMiddleware(next http.Handler) http.Handler {
 }
 
 func (l *Logger) Log(key string, value string) {
+	log.Printf("%s: %s", key, value)
 	log.WithFields(log.Fields{
 		key: value,
 	})
